@@ -55,6 +55,87 @@ const SKILL_SPECIFIC_QUESTIONS = {
     'Java': ["Explain JVM, JRE, and JDK.", "Difference between abstract class and interface in Java 8+."]
 };
 
+const ENTERPRISE_LIST = [
+    'amazon', 'google', 'meta', 'microsoft', 'apple', 'netflix',
+    'tcs', 'infosys', 'wipro', 'hcl', 'accenture', 'ibm',
+    'oracle', 'salesforce', 'adobe', 'intel', 'cisco', 'sap'
+];
+
+const getCompanyIntel = (companyName) => {
+    const name = companyName.toLowerCase();
+    const isEnterprise = ENTERPRISE_LIST.some(e => name.includes(e));
+
+    if (isEnterprise) {
+        return {
+            category: 'Enterprise',
+            size: 'Enterprise (2000+)',
+            industry: 'Technology Enterprise',
+            focus: 'Structured DSA & Core Fundamentals',
+            style: 'Standardized'
+        };
+    }
+
+    return {
+        category: 'Startup',
+        size: 'Startup (<200)',
+        industry: 'Early-stage Technology',
+        focus: 'Practical Problem Solving & Stack Depth',
+        style: 'Fast-paced'
+    };
+};
+
+const getRoundMapping = (intel, hasDSA, hasWeb) => {
+    if (intel.category === 'Enterprise') {
+        return [
+            {
+                title: 'Online Assessment',
+                subtitle: 'DSA + Aptitude',
+                desc: 'Standardized test to filter candidates.',
+                why: 'Checks for baseline problem-solving speed and logical consistency.'
+            },
+            {
+                title: 'Technical Round 1',
+                subtitle: hasDSA ? 'DSA + Complexity' : 'Core CS Fundamentals',
+                desc: 'Focus on clean code and algorithmic thinking.',
+                why: 'Ensures you can write efficient, maintainable code under pressure.'
+            },
+            {
+                title: 'Technical Round 2',
+                subtitle: hasWeb ? 'System Design & Stack' : 'Low-level Design',
+                desc: 'Deep dive into projects and specific technology.',
+                why: 'Validates that you truly understand the tools you use and can design systems.'
+            },
+            {
+                title: 'HR / Managerial',
+                subtitle: 'Culture & Behavioral',
+                desc: 'Standard sit-down with leadership.',
+                why: 'Confirms long-term alignment with company values and team fit.'
+            }
+        ];
+    }
+
+    return [
+        {
+            title: 'Practical Coding',
+            subtitle: hasWeb ? 'Frontend/Fullstack Task' : 'Algorithm Implementation',
+            desc: 'Building a real feature or fixing a bug.',
+            why: 'Startups need hackers who can ship quality code quickly from day one.'
+        },
+        {
+            title: 'Tech Deep-Dive',
+            subtitle: 'System Discussion',
+            desc: 'Talking through project architecture choices.',
+            why: 'Tests your ability to reason about trade-offs in a fast-moving environment.'
+        },
+        {
+            title: 'Culture Fit',
+            subtitle: 'Founder / Team Round',
+            desc: 'Casual conversation with the core team.',
+            why: 'Crucial at startups to ensure you enjoy building things together.'
+        }
+    ];
+};
+
 export const analyzeJD = (company, role, jdText) => {
     const normalizedJD = jdText.toLowerCase();
     const extractedSkills = {};
@@ -118,6 +199,14 @@ export const analyzeJD = (company, role, jdText) => {
         }
     });
 
+    // 6. Company Intel & Round Mapping
+    const companyIntel = getCompanyIntel(company);
+    const roundMapping = getRoundMapping(
+        companyIntel,
+        normalizedJD.includes('dsa'),
+        Object.keys(extractedSkills).some(k => ['Web', 'Languages'].includes(k))
+    );
+
     // Shuffle and take top 10
     const finalQuestions = questions
         .sort(() => Math.random() - 0.5)
@@ -135,7 +224,9 @@ export const analyzeJD = (company, role, jdText) => {
         questions: finalQuestions,
         readinessScore: score,
         baseReadinessScore: score,
-        skillConfidenceMap: {}
+        skillConfidenceMap: {},
+        companyIntel,
+        roundMapping
     };
 };
 
