@@ -133,7 +133,9 @@ export const analyzeJD = (company, role, jdText) => {
         plan,
         checklist,
         questions: finalQuestions,
-        readinessScore: score
+        readinessScore: score,
+        baseReadinessScore: score,
+        skillConfidenceMap: {}
     };
 };
 
@@ -150,4 +152,13 @@ export const getHistory = () => {
 export const getAnalysisById = (id) => {
     const history = getHistory();
     return history.find(h => h.id === id);
+};
+
+export const updateAnalysis = (updatedAnalysis) => {
+    const history = getHistory();
+    const index = history.findIndex(h => h.id === updatedAnalysis.id);
+    if (index !== -1) {
+        history[index] = updatedAnalysis;
+        localStorage.setItem('placement_history', JSON.stringify(history));
+    }
 };
