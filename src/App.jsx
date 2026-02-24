@@ -5,6 +5,8 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Results from './pages/Results';
 import History from './pages/History';
+import TestChecklist from './pages/TestChecklist';
+import ShipLock from './pages/ShipLock';
 
 // Placeholder Pages
 const Practice = () => (
@@ -47,6 +49,8 @@ function App() {
                     <Route path="/assessments" element={<Assessments />} />
                     <Route path="/resources" element={<Resources />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/prp/07-test" element={<TestChecklist />} />
+                    <Route path="/prp/08-ship" element={<ShipLock />} />
                     <Route path="/history" element={<History />} />
                     <Route path="/results/:id" element={<Results />} />
                 </Route>
