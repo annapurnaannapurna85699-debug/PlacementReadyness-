@@ -15,7 +15,8 @@ import {
     Check,
     Building2,
     Map,
-    History as HistoryIcon
+    History as HistoryIcon,
+    AlertCircle
 } from 'lucide-react';
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -44,8 +45,10 @@ const Results = () => {
     if (!analysis) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <AlertCircle size={48} className="text-slate-300" />
                 <h2 className="text-2xl font-bold text-slate-900">Analysis Not Found</h2>
-                <Link to="/dashboard" className="text-primary font-bold flex items-center gap-2">
+                <p className="text-slate-400">The requested intelligence entry might be missing or corrupted.</p>
+                <Link to="/dashboard" className="text-primary font-bold flex items-center gap-2 mt-4">
                     <ChevronLeft size={20} /> Return to Dashboard
                 </Link>
             </div>
@@ -55,14 +58,13 @@ const Results = () => {
     const {
         company,
         role,
-        readinessScore,
-        baseReadinessScore,
+        finalScore,
+        baseScore,
         extractedSkills,
         checklist,
-        plan,
+        plan7Days,
         questions,
         skillConfidenceMap = {},
-        companyIntel = { category: 'Startup', industry: 'Technology', focus: 'General', size: 'Small' },
         roundMapping = []
     } = analysis;
 
@@ -71,21 +73,9 @@ const Results = () => {
         const newStatus = currentStatus === 'know' ? 'practice' : 'know';
         const newMap = { ...skillConfidenceMap, [skill]: newStatus };
 
-        let bonus = 0;
-        Object.keys(newMap).forEach(s => {
-            if (newMap[s] === 'know') bonus += 2;
-            else bonus -= 2;
-        });
-
-        const newScore = Math.min(100, Math.max(0, (baseReadinessScore || readinessScore) + bonus));
-        const updated = {
-            ...analysis,
-            skillConfidenceMap: newMap,
-            readinessScore: newScore
-        };
-
-        setAnalysis(updated);
+        const updated = { ...analysis, skillConfidenceMap: newMap };
         updateAnalysis(updated);
+        setAnalysis(getAnalysisById(id)); // Re-fetch to get updated scores/timestamps
     };
 
     const copyToClipboard = (text, type) => {
@@ -93,23 +83,27 @@ const Results = () => {
         alert(`${type} copied to clipboard!`);
     };
 
-    const generateFullText = () => {
-        let text = `Placement Prep Analysis: ${company} - ${role}\n`;
-        text += `Readiness Score: ${readinessScore}%\n\n`;
-        text += `--- COMPANY INTEL ---\nIndustry: ${companyIntel.industry}\nScale: ${companyIntel.size}\nFocus: ${companyIntel.focus}\n\n`;
-        return text + "Check app for full roadmap.";
-    };
+    // Safe industry inference for display
+    const industry = analysis.companyIntel?.industry || "Technology Services";
+    const size = analysis.companyIntel?.size || "Scaling Startup";
+    const focus = analysis.companyIntel?.focus || "Practical Skills";
 
     const downloadTxt = () => {
+        let text = `Placement Prep Analysis: ${company} - ${role}\n`;
+        text += `Score: ${finalScore}%\n\n`;
+        text += `SKILLS:\n${JSON.stringify(extractedSkills, null, 2)}\n\n`;
+        text += `PLAN:\n${plan7Days.map(p => `${p.day}: ${p.tasks.join(', ')}`).join('\n')}`;
+
         const element = document.createElement("a");
-        const file = new Blob([generateFullText()], { type: 'text/plain' });
+        const file = new Blob([text], { type: 'text/plain' });
         element.href = URL.createObjectURL(file);
-        element.download = `Placement_Prep_${company.replace(/\s+/g, '_')}.txt`;
+        element.download = `Prep_Report_${company || 'Local'}.txt`;
         document.body.appendChild(element);
         element.click();
     };
 
-    const weakSkills = Object.values(extractedSkills).flat().filter(s => skillConfidenceMap[s] !== 'know').slice(0, 3);
+    const allSkills = Object.values(extractedSkills).flat();
+    const weakSkills = allSkills.filter(s => skillConfidenceMap[s] !== 'know').slice(0, 3);
 
     return (
         <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -121,8 +115,8 @@ const Results = () => {
                         <ChevronLeft size={16} /> Back
                     </Link>
                     <div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">{company}</h1>
-                        <p className="text-xl font-medium text-slate-500">{role}</p>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">{company || "JD Analysis"}</h1>
+                        <p className="text-xl font-medium text-slate-500">{role || "Target Role"}</p>
                     </div>
                 </div>
 
@@ -134,29 +128,28 @@ const Results = () => {
                                 className="text-primary transition-all duration-1000 ease-out"
                                 strokeWidth="6"
                                 strokeDasharray={2 * Math.PI * 34}
-                                strokeDashoffset={2 * Math.PI * 34 * (1 - readinessScore / 100)}
+                                strokeDashoffset={2 * Math.PI * 34 * (1 - finalScore / 100)}
                                 strokeLinecap="round"
                                 stroke="currentColor"
                                 fill="transparent"
                                 r="34" cx="40" cy="40"
                             />
                         </svg>
-                        <span className="absolute text-xl font-black text-primary">{readinessScore}</span>
+                        <span className="absolute text-xl font-black text-primary">{Math.round(finalScore)}</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-2xl font-black text-slate-900 leading-none">Readiness</span>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live Update</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">v2.0 Logic</span>
                     </div>
                 </div>
             </div>
 
-            {/* Export Toolbar */}
             <div className="flex flex-wrap gap-3">
-                <button onClick={() => copyToClipboard(plan.map(p => `${p.day}: ${p.tasks.join(', ')}`).join('\n'), 'Plan')} className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:border-primary/30 hover:text-primary shadow-sm">
-                    <Copy size={16} /> 7-Day Plan
+                <button onClick={() => copyToClipboard(JSON.stringify(plan7Days), '7-Day Plan')} className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 hover:border-primary/30 transition-all shadow-sm">
+                    <Copy size={16} /> Copy Prep Plan
                 </button>
-                <button onClick={downloadTxt} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 shadow-lg ml-auto">
-                    <Download size={16} /> Download Report
+                <button onClick={downloadTxt} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg ml-auto">
+                    <Download size={16} /> Export Intel
                 </button>
             </div>
 
@@ -167,84 +160,83 @@ const Results = () => {
                     {/* Company Intel Block */}
                     <section className="space-y-4">
                         <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm">
-                            <Building2 size={18} /> Company Intel
+                            <Building2 size={18} /> Market Intel
                         </div>
-                        <Card className="p-8 border-t-4 border-t-primary bg-gradient-to-br from-white to-slate-50">
+                        <Card className="p-8 border-t-4 border-t-primary bg-white">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <div className="space-y-1">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Industry Category</span>
-                                        <p className="text-lg font-bold text-slate-900">{companyIntel.industry}</p>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Industry Segment</span>
+                                        <p className="text-lg font-bold text-slate-900">{industry}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scale</span>
-                                        <p className="text-lg font-bold text-slate-900">{companyIntel.size}</p>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Business Scale</span>
+                                        <p className="text-lg font-bold text-slate-900">{size}</p>
                                     </div>
                                 </div>
-                                <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 space-y-3">
+                                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-3">
                                     <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
-                                        <Zap size={14} className="fill-primary" /> Typical Hiring Focus
+                                        <Zap size={14} className="fill-primary" /> Core Focus Area
                                     </div>
                                     <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                                        {companyIntel.focus}
+                                        {focus}
                                     </p>
                                 </div>
-                            </div>
-                            <div className="mt-8 pt-6 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                <HistoryIcon size={12} /> Demo Mode: Company intel generated heuristically.
                             </div>
                         </Card>
                     </section>
 
-                    {/* Round Mapping Engine */}
+                    {/* Round Mapping */}
                     <section className="space-y-4">
                         <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm">
-                            <Map size={18} /> Round Mapping
+                            <Map size={18} /> Recruitment Mapping
                         </div>
                         <div className="relative pl-8 space-y-10 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
                             {roundMapping.map((round, idx) => (
                                 <div key={idx} className="relative group">
-                                    <div className="absolute -left-[30px] top-1 w-6 h-6 rounded-full bg-white border-4 border-primary z-10" />
+                                    <div className="absolute -left-[30px] top-1 w-6 h-6 rounded-full bg-white border-4 border-primary z-10 shrink-0" />
                                     <div className="space-y-3">
                                         <div>
-                                            <h4 className="text-xl font-black text-slate-900">{round.title}</h4>
-                                            <p className="text-sm font-bold text-primary uppercase tracking-wider">{round.subtitle}</p>
+                                            <h4 className="text-xl font-black text-slate-900">{round.roundTitle}</h4>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {(round.focusAreas || []).map(f => (
+                                                    <span key={f} className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/5 px-2 py-0.5 rounded">
+                                                        {f}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-slate-500 leading-relaxed max-w-xl">{round.desc}</p>
-                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 max-w-lg">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Why this round matters</span>
-                                            <p className="text-xs font-semibold text-slate-600 italic">"{round.why}"</p>
-                                        </div>
+                                        <p className="text-sm text-slate-500 leading-relaxed max-w-xl italic">
+                                            " {round.whyItMatters} "
+                                        </p>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </section>
 
-                    {/* Extracted Skills */}
+                    {/* Skill Assessment */}
                     <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm">
-                                <Tags size={18} /> Skill Assessment
-                            </div>
+                        <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm">
+                            <Tags size={18} /> Skill Validation
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {Object.entries(extractedSkills).map(([category, skills]) => (
-                                <Card key={category} className="p-4 bg-slate-50/50">
-                                    <h4 className="text-xs font-black text-slate-400 uppercase mb-3 tracking-tighter">{category}</h4>
+                            {Object.entries(extractedSkills).map(([category, skills]) => skills.length > 0 && (
+                                <Card key={category} className="p-4 bg-slate-50/30">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">{category}</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {skills.map(skill => (
                                             <button
                                                 key={skill}
                                                 onClick={() => handleToggleSkill(skill)}
                                                 className={cn(
-                                                    "group flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border shadow-sm",
+                                                    "group flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all border",
                                                     skillConfidenceMap[skill] === 'know'
                                                         ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                                                        : "bg-white border-slate-200 text-slate-600 hover:border-primary/30"
+                                                        : "bg-white border-slate-200 text-slate-500 hover:border-primary/50"
                                                 )}
                                             >
-                                                {skillConfidenceMap[skill] === 'know' ? <Check size={12} /> : <div className="w-3 h-3 border-2 border-slate-300 rounded-full" />}
+                                                {skillConfidenceMap[skill] === 'know' ? <Check size={12} /> : <div className="w-2 h-2 rounded-full bg-slate-200" />}
                                                 {skill}
                                             </button>
                                         ))}
@@ -257,23 +249,26 @@ const Results = () => {
                     {/* 7-Day Plan */}
                     <section className="space-y-4">
                         <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm">
-                            <Calendar size={18} /> 7-Day Preparation Roadmap
+                            <Calendar size={18} /> Strategic 7-Day Roadmap
                         </div>
                         <div className="space-y-4">
-                            {plan.map((item, idx) => (
-                                <div key={idx} className="flex gap-6 group">
+                            {plan7Days.map((item, idx) => (
+                                <div key={idx} className="flex gap-6">
                                     <div className="flex flex-col items-center">
-                                        <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-black relative z-10 shrink-0">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black shrink-0 shadow-lg">
                                             {idx + 1}
                                         </div>
-                                        {idx !== plan.length - 1 && <div className="w-0.5 h-full bg-slate-100 group-hover:bg-primary/20 transition-colors" />}
+                                        {idx !== plan7Days.length - 1 && <div className="w-0.5 h-full bg-slate-100 mt-2" />}
                                     </div>
-                                    <Card className="flex-1 p-5 mb-4 hover:border-primary/30">
-                                        <h4 className="font-bold text-slate-900 mb-3">{item.day}</h4>
+                                    <Card className="flex-1 p-5 mb-4 border-slate-200/60 shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-bold text-slate-900">{item.day}</h4>
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">{item.focus}</span>
+                                        </div>
                                         <ul className="space-y-2">
-                                            {item.tasks.map((task, tidx) => (
+                                            {(item.tasks || []).map((task, tidx) => (
                                                 <li key={tidx} className="flex items-start gap-3 text-sm text-slate-600">
-                                                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                                                     {task}
                                                 </li>
                                             ))}
@@ -288,52 +283,51 @@ const Results = () => {
                 <div className="space-y-8">
                     <section className="space-y-6 sticky top-8">
                         <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-sm px-1">
-                            <ClipboardList size={18} /> Round-wise Checklist
+                            <ClipboardList size={18} /> Prep Checklist
                         </div>
 
-                        {Object.entries(checklist).map(([round, items]) => (
-                            <div key={round} className="space-y-3">
-                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider bg-slate-100 px-3 py-2 rounded-md inline-block">
-                                    {round}
+                        {(checklist || []).map((round, idx) => (
+                            <div key={idx} className="space-y-3">
+                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest bg-slate-100 px-3 py-2 rounded-lg inline-block">
+                                    {round.roundTitle}
                                 </h4>
                                 <div className="space-y-2">
-                                    {items.map((item, idx) => (
-                                        <label key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-transparent hover:border-slate-100 hover:bg-white cursor-pointer group transition-all">
+                                    {(round.items || []).map((item, iidx) => (
+                                        <label key={iidx} className="flex items-start gap-3 p-3 rounded-xl border border-transparent hover:bg-slate-50 cursor-pointer group transition-all">
                                             <input type="checkbox" className="mt-1 w-4 h-4 rounded border-slate-300 text-primary accent-primary" />
-                                            <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900">{item}</span>
+                                            <span className="text-sm text-slate-600 font-medium">{item}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
                         ))}
 
-                        <Card className="bg-slate-900 text-white p-6 shadow-2xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+                        <Card className="bg-slate-900 text-white p-6 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-5">
                                 <Zap size={64} />
                             </div>
-                            <h4 className="font-bold text-primary mb-4 flex items-center gap-2 text-lg">
-                                <Zap size={20} className="fill-primary" /> Action Plan
+                            <h4 className="font-bold text-primary mb-4 flex items-center gap-2 text-base">
+                                <Zap size={18} className="fill-primary" /> Action Plan
                             </h4>
 
                             {weakSkills.length > 0 ? (
                                 <div className="space-y-4">
-                                    <p className="text-sm text-slate-400">Focus on these weak areas first:</p>
+                                    <p className="text-sm text-slate-400">Master these priority skills:</p>
                                     <div className="flex flex-wrap gap-2">
                                         {weakSkills.map(s => (
-                                            <span key={s} className="bg-white/10 text-white px-3 py-1 rounded-lg text-xs font-bold border border-white/10">
+                                            <span key={s} className="bg-white/10 text-white px-3 py-1 rounded-lg text-[10px] font-bold border border-white/5">
                                                 {s}
                                             </span>
                                         ))}
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-sm text-emerald-400 font-bold">You've mastered all extracted skills!</p>
+                                <p className="text-sm text-emerald-400 font-bold">Readiness optimized!</p>
                             )}
 
-                            <div className="mt-8 space-y-3">
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Suggested Next Step</p>
-                                <div className="flex items-center justify-between group/btn cursor-pointer">
-                                    <span className="text-lg font-black tracking-tight group-hover:text-primary transition-colors">Start Day 1 plan now.</span>
+                            <div className="mt-8 pt-6 border-t border-white/5">
+                                <div className="flex items-center justify-between group cursor-pointer">
+                                    <span className="text-lg font-black tracking-tight group-hover:text-primary transition-colors">Start Day 1 now.</span>
                                     <ArrowRight size={20} className="text-primary group-hover:translate-x-1 transition-transform" />
                                 </div>
                             </div>
