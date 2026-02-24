@@ -2,28 +2,9 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
+import Dashboard from './pages/Dashboard';
 
 // Placeholder Pages
-const Dashboard = () => (
-    <div>
-        <h1 className="text-3xl font-bold mb-6">User Dashboard</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200">
-                <h3 className="font-bold text-slate-400 text-sm uppercase mb-4">Total Progress</h3>
-                <p className="text-4xl font-black text-slate-900 leading-none">64%</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200">
-                <h3 className="font-bold text-slate-400 text-sm uppercase mb-4">Problems Solved</h3>
-                <p className="text-4xl font-black text-slate-900 leading-none">128</p>
-            </div>
-            <div className="bg-white p-6 rounded-2xl border border-slate-200">
-                <h3 className="font-bold text-slate-400 text-sm uppercase mb-4">Rank</h3>
-                <p className="text-4xl font-black text-slate-900 leading-none">#1,432</p>
-            </div>
-        </div>
-    </div>
-);
-
 const Practice = () => (
     <div>
         <h1 className="text-3xl font-bold mb-6">Practice Problems</h1>
