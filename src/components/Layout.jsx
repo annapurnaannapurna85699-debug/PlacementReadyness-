@@ -7,7 +7,8 @@ import {
     Library,
     UserCircle,
     Menu,
-    Bell
+    Bell,
+    History as HistoryIcon
 } from 'lucide-react';
 
 const SidebarItem = ({ to, icon: Icon, label }) => (
@@ -39,6 +40,7 @@ const Layout = () => {
 
                 <nav className="flex-1 flex flex-col gap-2">
                     <SidebarItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <SidebarItem to="/history" icon={HistoryIcon} label="History" />
                     <SidebarItem to="/practice" icon={BookOpen} label="Practice" />
                     <SidebarItem to="/assessments" icon={FileCheck} label="Assessments" />
                     <SidebarItem to="/resources" icon={Library} label="Resources" />

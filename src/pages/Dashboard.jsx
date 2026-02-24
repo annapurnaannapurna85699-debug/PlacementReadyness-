@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
 } from 'recharts';
-import { Calendar, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
+import { Calendar, ChevronRight, CheckCircle2, Clock, Zap } from 'lucide-react';
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { analyzeJD, saveToHistory } from '../utils/analysisEngine';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -43,17 +45,76 @@ const radarData = [
 ];
 
 const Dashboard = () => {
+    const [formData, setFormData] = React.useState({ company: '', role: '', jd: '' });
+    const navigate = useNavigate();
+
+    const handleAnalyze = (e) => {
+        e.preventDefault();
+        const results = analyzeJD(formData.company, formData.role, formData.jd);
+        saveToHistory(results);
+        navigate(`/results/${results.id}`);
+    };
+
     const score = 72;
     const radius = 70;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
             <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Placement Readiness</h1>
-                <p className="text-slate-500">Welcome back! Here's your preparation overview for today.</p>
+                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Placement Preparation</h1>
+                <p className="text-slate-500">Analyze Job Descriptions and get a personalized 7-day preparation plan.</p>
             </div>
+
+            {/* Analysis Form Section */}
+            <Card className="border-t-4 border-t-primary shadow-xl">
+                <CardHeader>
+                    <CardTitle className="text-xl">New Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleAnalyze} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Company Name</label>
+                                <input
+                                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    placeholder="e.g. Google, Stripe..."
+                                    value={formData.company}
+                                    onChange={e => setFormData({ ...formData, company: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Target Role</label>
+                                <input
+                                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    placeholder="e.g. Software Engineer, Frontend..."
+                                    value={formData.role}
+                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Job Description</label>
+                            <textarea
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                placeholder="Paste the JD here to extract skills and generate a plan..."
+                                value={formData.jd}
+                                onChange={e => setFormData({ ...formData, jd: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="bg-primary text-white font-bold py-4 px-8 rounded-xl text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/30 w-full md:w-auto"
+                        >
+                            Generate Analysis Logic
+                        </button>
+                    </form>
+                </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column */}

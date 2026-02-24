@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
+import Results from './pages/Results';
+import History from './pages/History';
 
 // Placeholder Pages
 const Practice = () => (
@@ -45,6 +47,8 @@ function App() {
                     <Route path="/assessments" element={<Assessments />} />
                     <Route path="/resources" element={<Resources />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/results/:id" element={<Results />} />
                 </Route>
 
                 {/* Fallback */}
